@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -9,13 +11,13 @@ import (
 
 type Block struct {
 	nonce        int
-	previousHash string
+	previousHash [32]byte
 	timestamp    int64
 	transaction  []string
 }
 
-// function returns new block
-func NewBlock(nonce int, previousHash string) *Block {
+// function returns new block i.e intializing new block
+func NewBlock(nonce int, previousHash [32]byte) *Block {
 	b := new(Block)
 	b.timestamp = time.Now().UnixNano()
 	b.nonce = nonce
@@ -31,21 +33,46 @@ func (b *Block) Print() {
 	fmt.Printf("transaction    %s\n", b.transaction)
 }
 
+func (b *Block) Hash() [32]byte {
+	m, _ := json.Marshal(b)
+	// fmt.Println(string(m))
+	return sha256.Sum256([]byte(m))
+}
+
+func (b *Block) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Timestamp    int64    `json:"timestmp"`
+		Nonce        int      `json:"nonce"`
+		PreviousHash [32]byte `json:"previous_hash"`
+		Trnsaction   []string `json:"transaction"`
+	}{
+		Timestamp:    b.timestamp,
+		Nonce:        b.nonce,
+		PreviousHash: b.previousHash,
+		Trnsaction:   b.transaction,
+	})
+}
+
 type Blockchain struct {
 	transactionPool []string
 	chain           []*Block
 }
 
 func NewBlockChain() *Blockchain {
+	b := &Block{}
 	bc := new(Blockchain)
-	bc.CreateBlock(0, "Init Hash")
+	bc.CreateBlock(0, b.Hash())
 	return bc
 }
 
-func (bc *Blockchain) CreateBlock(nonce int, previosusHash string) *Block {
+func (bc *Blockchain) CreateBlock(nonce int, previosusHash [32]byte) *Block {
 	b := NewBlock(nonce, previosusHash)
 	bc.chain = append(bc.chain, b)
 	return b
+}
+
+func (bc *Blockchain) LastBlock() *Block {
+	return bc.chain[len(bc.chain)-1]
 }
 
 func (bc *Blockchain) Print() {
@@ -61,10 +88,15 @@ func init() {
 }
 
 func main() {
+
 	blockchain := NewBlockChain()
 	// blockchain.Print()
-	blockchain.CreateBlock(5, "Hash 1")
-	blockchain.Print()
-	blockchain.CreateBlock(2, "Hash 2")
+
+	previousHash := blockchain.LastBlock().Hash()
+	blockchain.CreateBlock(5, previousHash)
+	// blockchain.Print()
+
+	previousHash = blockchain.LastBlock().Hash()
+	blockchain.CreateBlock(2, previousHash)
 	blockchain.Print()
 }
