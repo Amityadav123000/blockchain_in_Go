@@ -64,7 +64,7 @@ func main() {
 	blockchain := NewBlockChain()
 	// blockchain.Print()
 	blockchain.CreateBlock(5, "Hash 1")
-	// blockchain.Print()
+	blockchain.Print()
 	blockchain.CreateBlock(2, "Hash 2")
 	blockchain.Print()
 }
