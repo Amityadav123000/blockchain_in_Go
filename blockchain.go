@@ -13,15 +13,16 @@ type Block struct {
 	nonce        int
 	previousHash [32]byte
 	timestamp    int64
-	transaction  []string
+	transaction  []*Trnsaction
 }
 
 // function returns new block i.e intializing new block
-func NewBlock(nonce int, previousHash [32]byte) *Block {
+func NewBlock(nonce int, previousHash [32]byte, transaction []*Trnsaction) *Block {
 	b := new(Block)
 	b.timestamp = time.Now().UnixNano()
 	b.nonce = nonce
 	b.previousHash = previousHash
+	b.transaction = transaction
 	return b
 }
 
@@ -30,7 +31,9 @@ func (b *Block) Print() {
 	fmt.Printf("timestamp      %d\n", b.timestamp)
 	fmt.Printf("nonce          %d\n", b.nonce)
 	fmt.Printf("previous_hash  %s\n", b.previousHash)
-	fmt.Printf("transaction    %s\n", b.transaction)
+	for _, t := range b.transaction {
+		t.Print()
+	}
 }
 
 func (b *Block) Hash() [32]byte {
@@ -41,10 +44,10 @@ func (b *Block) Hash() [32]byte {
 
 func (b *Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Timestamp    int64    `json:"timestmp"`
-		Nonce        int      `json:"nonce"`
-		PreviousHash [32]byte `json:"previous_hash"`
-		Trnsaction   []string `json:"transaction"`
+		Timestamp    int64         `json:"timestmp"`
+		Nonce        int           `json:"nonce"`
+		PreviousHash [32]byte      `json:"previous_hash"`
+		Trnsaction   []*Trnsaction `json:"transaction"`
 	}{
 		Timestamp:    b.timestamp,
 		Nonce:        b.nonce,
@@ -54,7 +57,7 @@ func (b *Block) MarshalJSON() ([]byte, error) {
 }
 
 type Blockchain struct {
-	transactionPool []string
+	transactionPool []*Trnsaction
 	chain           []*Block
 }
 
@@ -66,13 +69,48 @@ func NewBlockChain() *Blockchain {
 }
 
 func (bc *Blockchain) CreateBlock(nonce int, previosusHash [32]byte) *Block {
-	b := NewBlock(nonce, previosusHash)
+	b := NewBlock(nonce, previosusHash, bc.transactionPool)
 	bc.chain = append(bc.chain, b)
+	bc.transactionPool = []*Trnsaction{}
 	return b
 }
 
 func (bc *Blockchain) LastBlock() *Block {
 	return bc.chain[len(bc.chain)-1]
+}
+
+func (bc *Blockchain) AddTransaction(sender string, reciepeint string, value float32) {
+	t := NewTransaction(sender, reciepeint, value)
+	bc.transactionPool = append(bc.transactionPool, t)
+}
+
+type Trnsaction struct {
+	senderBLockChainAddress   string
+	recieverBlockChainAddress string
+	value                     float32
+}
+
+func NewTransaction(sender string, recipient string, value float32) *Trnsaction {
+	return &Trnsaction{sender, recipient, value}
+}
+
+func (t *Trnsaction) Print() {
+	fmt.Printf("%s\n", strings.Repeat("-", 40))
+	fmt.Printf("senderBlockChainAddress    %s\n", t.senderBLockChainAddress)
+	fmt.Printf("recieverBlockChainAddress  %s\n", t.recieverBlockChainAddress)
+	fmt.Printf("value                      %.1f\n", t.value)
+}
+
+func (t *Trnsaction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SenderBLockChainAddress   string  `json:"sender_blockchain_address"`
+		RecieverBlockChainAddress string  `json:"reciepient_blockchain_address"`
+		Value                     float32 `json:"value"`
+	}{
+		SenderBLockChainAddress:   t.senderBLockChainAddress,
+		RecieverBlockChainAddress: t.recieverBlockChainAddress,
+		Value:                     t.value,
+	})
 }
 
 func (bc *Blockchain) Print() {
@@ -92,10 +130,13 @@ func main() {
 	blockchain := NewBlockChain()
 	// blockchain.Print()
 
+	blockchain.AddTransaction("A", "B", 1.0)
 	previousHash := blockchain.LastBlock().Hash()
 	blockchain.CreateBlock(5, previousHash)
 	// blockchain.Print()
 
+	blockchain.AddTransaction("C", "D", 2.0)
+	blockchain.AddTransaction("X", "Y", 3.0)
 	previousHash = blockchain.LastBlock().Hash()
 	blockchain.CreateBlock(2, previousHash)
 	blockchain.Print()
